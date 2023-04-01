@@ -63,6 +63,7 @@ int main(int argc, char** argv)
         //Try to create the image from the input file name
         origImg = stbi_load(imgFileName.c_str(), &width, &height, &channels, 0);
 
+        //If the image could not be loaded keep trying to get a valid image name
         while(origImg == NULL) 
         {
             cout << "\nError in loading the image\n";
