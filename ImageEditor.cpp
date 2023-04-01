@@ -73,6 +73,7 @@ int main(int argc, char** argv)
             origImg = stbi_load(imgFileName.c_str(), &width, &height, &channels, 0);
         }
 
+        //Print image attributes
         cout << "Loaded image " << imgFileName << " with a width of " << width << "px, a height of " << height << "px, and " << channels << " channels\n";
     
         //String that holds the option that the user chose
