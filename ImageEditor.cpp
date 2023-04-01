@@ -120,10 +120,10 @@ int main(int argc, char** argv)
         {
 
             //Need to know if extra rows must be assigned
-            int remainder = height % nproc;
+            int remainder = (height * channels) % nproc;
 
             //Number of rows each processor must work on
-            int defaultWork = height / nproc;
+            int defaultWork = (height * channels) / nproc;
 
             //Holds the current rank of who's pixels are being stored
             int currentRank = 0;
@@ -165,7 +165,6 @@ int main(int argc, char** argv)
                     }
                 }
 
-
                 //Send the size of the pixelsToSend vector and the pixelsToSend vector to each other processor
                 if(currentRank != 0)
                 {
@@ -180,11 +179,13 @@ int main(int argc, char** argv)
                 currentRank++;
             }
 
+            //cout << "rankZeroPixels.size(): " << rankZeroPixels.size() << "\n";
+
         }
         else //Send columns to each processor
         {
 
-            int remainder = width % nproc;
+            
 
         }
 
@@ -242,6 +243,11 @@ int main(int argc, char** argv)
             //editedImg[2] = origImg[0];
             //editedImg[3] = origImg[0];
             //editedImg[4] = origImg[0];
+
+            /*for(int i = 0; i < (width * height * channels) / 2; i++)
+            {
+                editedImg[i] = origImg[0];
+            }*/
 
             //Save the edited image
             stbi_write_jpg(newFileName, width, height, channels, editedImg, 100);
