@@ -173,7 +173,7 @@ int main(int argc, char** argv)
                     MPI_Send(&pixelsToSend.front(), pixelsToSend.size(), MPI_UNSIGNED_CHAR, currentRank, 13, comm);
                 }
 
-                //Reset the vecotr for the next rank
+                //Reset the vector for the next rank
                 pixelsToSend.clear();
 
                 currentRank++;
@@ -181,17 +181,105 @@ int main(int argc, char** argv)
 
             //cout << "rankZeroPixels.size(): " << rankZeroPixels.size() << "\n";
 
-        }
+        } //End of sending rows to each processor
         else //Send columns to each processor
         {
 
-            
+            //Need to know if extra columns must be assigned
+            int remainder = width % nproc;
 
+            //Number of columns each processor must work on
+            int defaultWork = width  / nproc;
+
+            //Holds the current rank of who's pixels are being stored
+            int currentRank = 0;
+            //Holds the index current column to get a pixel from
+            int currentCol = 0;
+            //Holds the current row to get a pixel from
+            int currentRow = 0;
+
+            //Get the vector of pixels for each rank
+            while(currentRank < nproc)
+            {
+                
+                //Holds how many columns the current rank needs to process
+                int localWork = defaultWork;
+
+                if(currentRank < remainder) //Need to assign extra columns to workers with ranks lower than the remainder to evenly distribute work
+                {
+                    localWork += 1;
+                }
+
+                //Holds how many columns have been put into the processors array to be sent
+                int numColsProcessed = 0;
+
+                //Store the pixels for the current rank from the reqiured columns
+                while(numColsProcessed < localWork)
+                {
+                    if(currentRank == 0) //Store rank 0's pixels in a special vector for later use
+                    {
+                        rankZeroPixels.push_back(origImg[currentCol + currentRow * width]);
+                    }
+                    else //Store the other processors' pixels temporarily to be sent
+                    {
+                        pixelsToSend.push_back(origImg[currentCol + currentRow * width]);
+                    }
+
+                    currentRow++;
+
+                    if(currentRow % (height * channels) == 0) //Next row column
+                    {
+                        numColsProcessed++;
+                        currentCol++;
+                        currentRow = 0;
+                    }
+                }
+
+                //Send the size of the pixelsToSend vector and the pixelsToSend vector to each other processor
+                if(currentRank != 0)
+                {
+                    int numPixels = pixelsToSend.size();
+                    MPI_Send(&numPixels, 1, MPI_INT, currentRank, 12, comm);
+                    MPI_Send(&pixelsToSend.front(), pixelsToSend.size(), MPI_UNSIGNED_CHAR, currentRank, 13, comm);
+                }
+
+                //Reset the vector for the next rank
+                pixelsToSend.clear();
+
+                currentRank++;
+            }
+
+            //cout << "rankZeroPixels.size(): " << rankZeroPixels.size() << "\n";
+
+        } //End of sending columns to each processor
+
+        for(int i = 1; i < nproc; i++)
+        {
+            MPI_Send(&width, 1, MPI_INT, i, 20, comm);
         }
+
+        for(int i = 1; i < nproc; i++)
+        {
+            MPI_Send(&height, 1, MPI_INT, i, 21, comm);
+        }
+
+        for(int i = 1; i < nproc; i++)
+        {
+            MPI_Send(&channels, 1, MPI_INT, i, 22, comm);
+        }
+
+        int intOption = stoi(option);
+
+        for(int i = 1; i < nproc; i++)
+        {
+            MPI_Send(&intOption, 1, MPI_INT, i, 23, comm);
+        }
+
+        //Perform editing here for rank 0
+
 
         //Allocate memory for the edited image to receive the other processors pixels into
         unsigned char *editedImg = (unsigned char *) malloc(width * height * channels);
-        //unsigned char *editedImg = stbi_load(imgFileName.c_str(), &width, &height, &channels, 0);
 
         if(option == "1" || option == "3") //Receive rows
         {
@@ -238,12 +326,6 @@ int main(int argc, char** argv)
             char newFileName [sizeof(imgFileName) + sizeof("Edited.png")];
             sprintf(newFileName, "%sEdited.jpg", imgFileName.c_str());
 
-            //editedImg[0] = origImg[0];
-            //editedImg[1] = origImg[0];
-            //editedImg[2] = origImg[0];
-            //editedImg[3] = origImg[0];
-            //editedImg[4] = origImg[0];
-
             /*for(int i = 0; i < (width * height * channels) / 2; i++)
             {
                 editedImg[i] = origImg[0];
@@ -252,11 +334,71 @@ int main(int argc, char** argv)
             //Save the edited image
             stbi_write_jpg(newFileName, width, height, channels, editedImg, 100);
 
-        }
+        } //End of receiving rows
         else //Receive columns
         {
 
-        }
+            //Holds the column to put the current pixel into the edited image
+            int currentCol = 0;
+            //Holds the column to put the current pixel into the edited image
+            int currentRow = 0;
+            
+            //Size of the rankZeroPixelsVector
+            int rankZeroPixelsSize = rankZeroPixels.size();
+
+            //Put all the pixels in the rankZeroPixels vector into the new image
+            for(int i = 0; i < rankZeroPixelsSize; i++)
+            {
+                editedImg[currentCol + currentRow * width] = rankZeroPixels[i];
+                //editedImg[currentCol + currentRow * width] = origImg[0];
+                currentRow++;
+
+                if(currentRow % (height * channels) == 0) //Next column reached
+                {
+                    currentCol++;
+                    currentRow = 0;
+                }
+            }
+
+            //Get all the pixels from the other processor and put then into the edited image
+            for(int i = 1; i < nproc; i++)
+            {
+                //Number of pixels to receive from the current processor
+                int numPixels;
+                MPI_Recv(&numPixels, 1, MPI_INT, i, 14, comm, MPI_STATUS_IGNORE);
+
+                //Vector to receive the current processor'ss pixels into
+                vector<unsigned char> newPixels (numPixels, '0');
+                MPI_Recv(&newPixels.front(), numPixels, MPI_UNSIGNED_CHAR, i, 15, comm, MPI_STATUS_IGNORE);
+
+                //Put the pixels from the current processor into the edited image
+                for(int j = 0; j < numPixels; j++)
+                {
+                    editedImg[currentCol + currentRow * width] = newPixels[j];
+                    currentRow++;
+
+                    if(currentRow % (height * channels) == 0) //Next column reached
+                    {
+                        currentCol++;
+                        currentRow = 0;
+                    }
+                }
+            }
+
+            /*for(int i = 0; i < height * width; i++)
+            {
+                cout << "i = " << i << "editedImg[i] = " << editedImg[i] << "\n";
+            }*/
+
+            //Make the edited image's file name
+            char newFileName [sizeof(imgFileName) + sizeof("Edited.png")];
+            sprintf(newFileName, "%sEdited.jpg", imgFileName.c_str());
+
+            //Save the edited image
+            stbi_write_jpg(newFileName, width, height, channels, editedImg, 100);
+
+
+        } //End of receving columns
 
         //Free the memory used by the origianl image and edited image
         stbi_image_free(origImg); 
@@ -275,6 +417,26 @@ int main(int argc, char** argv)
 
         //cout<<rank<<" numPixels: " << numPixels << "\n";
         //cout<<rank<<" size: " << localPixels.size() << "\n";
+
+        //Receive width
+        MPI_Recv(&width, 1, MPI_INT, 0, 20, comm, MPI_STATUS_IGNORE);
+        //cout << "rank: " << rank << " width: " << width << "\n";
+
+        //Receive height
+        MPI_Recv(&height, 1, MPI_INT, 0, 21, comm, MPI_STATUS_IGNORE);
+        //cout << "rank: " << rank << " height: " << height << "\n";
+
+        //Receive channels
+        MPI_Recv(&channels, 1, MPI_INT, 0, 22, comm, MPI_STATUS_IGNORE);
+        //cout << "rank: " << rank << " channels: " << channels << "\n";
+        
+        //Receive the c string of option
+        int option;
+        MPI_Recv(&option, 1, MPI_INT, 0, 23, comm, MPI_STATUS_IGNORE);
+        //cout << "rank: " << rank << " option: " << option << "\n";
+
+        //Perform editing here for ranks other than 0
+
 
         //Send the number of pixels processed by this processor and send the processed pixels
         MPI_Send(&numPixels, 1, MPI_INT, 0, 14, comm);
