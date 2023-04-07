@@ -3,7 +3,7 @@
 //Takes in the name of an image file and gives the user the options to
 //sort the pixels of an image row or column wise or to change the contrast
 //and brightness of an image
-//Compile with: mpiCC -g -Wall -o ImageEditor ImageEditor.cpp
+//Compile with: mpicc -g -Wall -o ImageEditor ImageEditor.cpp
 //Run with: mpiexec -n <processors> ./ImageEditor
 
 #include <iostream>
