@@ -23,6 +23,12 @@ using namespace std;
 //Needs the number of channels in the image to do the conversion
 void convertToGrayScale(vector<unsigned char> &original, vector<unsigned char> &grayScale, int channels);
 
+//modifies the pixels of the vector by multiplying each rgb componenet by contrast
+void changeContrast(vector<unsigned char> &original, double contrast, int channels);
+
+//modifies the pixels of the vector by adding bright to each rgb component
+void changeBrightness(vector<unsigned char> &original, int bright, int channels); 
+
 int main(int argc, char** argv)
 {
 
@@ -49,6 +55,10 @@ int main(int argc, char** argv)
 
     //Will hold a pointer to the original image
     unsigned char *origImg;
+    
+    //variables for changing the images brightness and contrast
+    int bright;
+    double contrast;
 
     if(rank == 0)
     {
@@ -246,11 +256,37 @@ int main(int argc, char** argv)
         }
         else if(option == "3") //Change contrast
         {
+            cout << "\nPlease enter a value greater than 0: ";
+            cin >> contrast;
+
+            while(contrast < 0)
+            {
+                cout << "\nInvalid input. Please enter a value greater than 0: ";
+                cin >> contrast;
+            }
+
+            //broadcast the user input to the other cores
+            MPI_Bcast(&contrast, 1, MPI_DOUBLE, 0, comm);
+
+            //modify the rankZeroPixels
+            changeContrast(rankZeroPixels, contrast, channels);
 
         }
         else //Change brightness
         {
+            cout << "\nPlease enter an integer in the interval [0, 255]: ";
+            cin >> bright;
+            while(bright < 0 || bright > 255)
+            {
+                cout <<"\nValue not in the interval.\nPlease enter a value in the interval [0,255]: ";
+                cin >> bright;
+            }
 
+            //broadcast the user input to the other cores
+            MPI_Bcast(&bright, 1, MPI_INT, 0, comm);
+
+            //modify the rankZeroPixels
+            changeBrightness(rankZeroPixels, bright, channels);
         }
 
         //Need a edited image pointer
@@ -438,15 +474,25 @@ int main(int argc, char** argv)
         }
         else if(option == 3) //Change contrast
         {
+            //receive the contrast input from the user from manager core
+            MPI_Bcast(&contrast, 1, MPI_DOUBLE, 0, comm);
+
+            changeContrast(localPixels, contrast, channels);
+
             //Send the number of pixels processed by this processor and send the processed pixels
             MPI_Send(&numPixels, 1, MPI_INT, 0, 14, comm);
             MPI_Send(&localPixels.front(), numPixels, MPI_UNSIGNED_CHAR, 0, 15, comm);
         }
         else //Change brightness
         {
+            //recieve the brightness input from the user from the manager core
+            MPI_Bcast(&bright, 1, MPI_INT, 0, comm);
+
+            changeBrightness(localPixels, bright, channels);
+
             //Send the number of pixels processed by this processor and send the processed pixels
             MPI_Send(&numPixels, 1, MPI_INT, 0, 14, comm);
-            MPI_Send(&localPixels.front(), numPixels, MPI_UNSIGNED_CHAR, 0, 15, comm);   
+            MPI_Send(&localPixels.front(), numPixels, MPI_UNSIGNED_CHAR, 0, 15, comm);    
         }
 
     } //End of else (other ranks done)
@@ -486,4 +532,26 @@ void convertToGrayScale(vector<unsigned char> &original, vector<unsigned char> &
         curIndexGrayScale++;
     }
 
+}
+
+void changeContrast(vector<unsigned char> &original, double contrast, int channels)
+{
+    for(auto p = original.begin(); p != original.end(); p += channels)
+            {
+                //modifies contrast by the parameter contrast for each RBG component in a pixel
+                *p = fmin(*p * contrast, 255);
+                *(p + 1) = fmin(*(p + 1) * contrast, 255);
+                *(p + 2) = fmin(*(p + 2) * contrast, 255);
+            }
+}
+
+void changeBrightness(vector<unsigned char> &original, int bright, int channels)
+{
+    for(auto p = original.begin(); p != original.end(); p += channels)
+            {
+                //modifies brightness by the parameter bright for each RGB component in a pixel
+                *p = fmin(*p + bright, 255);
+                *(p + 1) = fmin(*(p + 1) + bright, 255);
+                *(p + 2) = fmin(*(p + 2) + bright, 255);
+            }
 }
