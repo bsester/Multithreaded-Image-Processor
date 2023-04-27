@@ -3,7 +3,7 @@
 //Takes in the name of an JPEG file and gives the user the options to
 //sort the pixels of an image row wise, change the image to gray scale,
 //change the image's contrast. or change the image's brightness.
-//Compile with: mpicc -g -Wall -o ImageEditor ImageEditor.cpp
+//Compile with: mpiCC -g -Wall -o ImageEditor ImageEditor.cpp
 //Run with: mpiexec -n <processors> ./ImageEditor
 
 #include <iostream>
@@ -128,16 +128,6 @@ int main(int argc, char** argv)
         //Print image attributes
         cout << "Loaded image " << imgFileName << " with a width of " << width << "px, a height of " << height << "px, and " << channels << " channels\n";
 
-        /*(for(unsigned int i = 0; i < width * height; i++)
-        {
-            cout << "i = " << i << "origImg[i] = " <<  origImg[i] << "\n";
-        }*/
-
-        //char newFileName1 [sizeof(imgFileName) + sizeof("2.jpg")];
-        //sprintf(newFileName1, "%s2.jpg", imgFileName.c_str());
-        //stbi_write_jpg(newFileName1, width, height, channels, origImg, 100);
-        //cout << "origImg[width * height - 1]: " << origImg[width * height - 1] <<"\n";
-
         //String that holds the option that the user chose
         string option = "";
 
@@ -201,7 +191,7 @@ int main(int argc, char** argv)
                 localWork += 1;
             }
 
-            if(option == "1")
+            if(option == "1") //If option 1 chosen need to store rank 0's work (number of rows) and send the work the the other processors
             {
               if(currentRank == 0)
               {
@@ -249,7 +239,6 @@ int main(int argc, char** argv)
             currentRank++;
         }
 
-        //cout << "rankZeroPixels.size(): " << rankZeroPixels.size() << "\n";
         //End of sending rows to each processor
 
 
@@ -289,16 +278,7 @@ int main(int argc, char** argv)
         if(option == "1") //Sort horizontally
         {
           // get the number of rows for this thread
-            int noPixels = rankZeroPixels.size();
             int rowLength = width * channels;
-            int numRows = noPixels / rowLength;
-
-            int remainder = height % nproc;
-
-            if (rank < remainder) // if there is an uneven distribution
-            {
-              numRows = numRows + 1;
-            }
 
             for (int i = 0; i < rankZeroWork; i++)
             {
@@ -423,13 +403,6 @@ int main(int argc, char** argv)
 
         double elapsedTime = MPI_Wtime() - startTime;
 
-        /*for(int i = 0; i < height * width; i++)
-        {
-            cout << "i = " << i << "editedImg[i] = " << editedImg[i] << "\n";
-        }*/
-
-        //cout << "current pixel: " << currentPixel << "\n";
-
         //Make the edited image's file name
         string newFileName = imgFileName.substr(0, imgFileName.rfind(".jpg"));
 
@@ -450,11 +423,6 @@ int main(int argc, char** argv)
         {
             newFileName = newFileName + "UpdatedBrightness.jpg";
         }
-
-        /*for(int i = 0; i < (width * height * channels) / 2; i++)
-        {
-            editedImg[i] = origImg[0];
-        }*/
 
         if(option != "2") //Save an image with its original number of channels
         {
@@ -504,9 +472,6 @@ int main(int argc, char** argv)
         vector<unsigned char> localPixels (numPixels, 0);
         MPI_Recv(&localPixels.front(), numPixels, MPI_UNSIGNED_CHAR, 0, 13, comm, MPI_STATUS_IGNORE);
 
-        //cout<<rank<<" numPixels: " << numPixels << "\n";
-        //cout<<rank<<" size: " << localPixels.size() << "\n";
-
         //Receive width
         MPI_Recv(&width, 1, MPI_INT, 0, 20, comm, MPI_STATUS_IGNORE);
         //cout << "rank: " << rank << " width: " << width << "\n";
@@ -527,17 +492,10 @@ int main(int argc, char** argv)
         if(option == 1) //Sort horizontally
         {
         int rowLength = width * channels;
-        int numRows = numPixels / rowLength;
-        int remainder = height % nproc;
 
         int localWork;
         MPI_Recv(&localWork, 1, MPI_INT, 0, 30, comm, MPI_STATUS_IGNORE);
 
-        if (rank < remainder) // if there is an uneven distribution
-        {
-          numRows = numRows + 1;
-        }
-        cout << "Rank " << rank << " localWork: " << localWork << " \nremainder: " << remainder << endl;
         for (int i = 0; i < localWork; i++)
         {
           int start = rowLength * i;
