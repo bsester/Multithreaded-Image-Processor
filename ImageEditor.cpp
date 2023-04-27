@@ -494,7 +494,7 @@ int main(int argc, char** argv)
         }
 
         //Print the output images name
-        cout << "\nOutput image is " << newFileName << "\n";
+        cout << "\nOutput image is " << newFileName << "\n\n\n";
 
         //Free the memory used by the origianl image and edited image
         stbi_image_free(origImg);

@@ -1,0 +1,53 @@
+#!/bin/bash
+#SBATCH --job-name="largeVerticalTests"
+#SBATCH --output="output_largeVertical.%j.%N.txt"
+#SBATCH --partition=compute
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=16
+#SBATCH --account=isu102
+#SBATCH --export=ALL
+#SBATCH -t 00:10:00
+
+
+srun -n 1 ./ImageEditor LargeVertical.jpg 1
+
+srun -n 2 ./ImageEditor LargeVertical.jpg 1
+
+srun -n 5 ./ImageEditor LargeVertical.jpg 1
+
+srun -n 10 ./ImageEditor LargeVertical.jpg 1
+
+srun -n 20 ./ImageEditor LargeVertical.jpg 1
+
+
+srun -n 1 ./ImageEditor LargeVertical.jpg 2
+
+srun -n 2 ./ImageEditor LargeVertical.jpg 2
+
+srun -n 5 ./ImageEditor LargeVertical.jpg 2
+
+srun -n 10 ./ImageEditor LargeVertical.jpg 2
+
+srun -n 20 ./ImageEditor LargeVertical.jpg 2
+
+
+srun -n 1 ./ImageEditor LargeVertical.jpg 3 3
+
+srun -n 2 ./ImageEditor LargeVertical.jpg 3 3
+
+srun -n 5 ./ImageEditor LargeVertical.jpg 3 3
+
+srun -n 10 ./ImageEditor LargeVertical.jpg 3 3
+
+srun -n 20 ./ImageEditor LargeVertical.jpg 3 3
+
+
+srun -n 1 ./ImageEditor LargeVertical.jpg 4 100
+
+srun -n 2 ./ImageEditor LargeVertical.jpg 4 100
+
+srun -n 5 ./ImageEditor LargeVertical.jpg 4 100
+
+srun -n 10 ./ImageEditor LargeVertical.jpg 4 100
+
+srun -n 20 ./ImageEditor LargeVertical.jpg 4 100
