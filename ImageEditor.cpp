@@ -4,7 +4,8 @@
 //sort the pixels of an image row wise, change the image to gray scale,
 //change the image's contrast. or change the image's brightness.
 //Compile with: mpiCC -g -Wall -o ImageEditor ImageEditor.cpp
-//Run with: mpiexec -n <processors> ./ImageEditor
+//Run with: mpiexec -n <processors> ./ImageEditor <image name> <option> <contrast/brightness>
+//The image name, option, and contrast/brightness variables are optional but if an image name is provided an option MUST also be provided
 
 #include <iostream>
 #include <fstream>
@@ -100,12 +101,27 @@ int main(int argc, char** argv)
 
     if(rank == 0)
     {
+
+        if(argc != 1 && argc != 3 && argc != 4) //If there is an incorrect number of command line arguments, abort the program
+        {
+            cout << "Incorrect number of command line arguments.\nExpecting no command line arguments or an image then an option and then a contrast/brightness number if option is 3 or 4.\n";
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }   
+
         //Creste regular expression to make sure the input file is a JPEG
         regex nameCheck("^\\w+\\.jpg$");
 
-        //Getting the name of the image file from the user
-        cout << "Please input the name of a JPEG file to be edited: ";
-        cin >> imgFileName;
+        if(argc != 3 && argc != 4)//If there are no command line arguments get the input file name from the user
+        {
+            //Getting the name of the image file from the user
+            cout << "Please input the name of a JPEG file to be edited: ";
+            cin >> imgFileName;
+
+        }
+        else //Otherwise get it from the first command line argument
+        {
+            imgFileName = argv[1];
+        }
 
         //If the image is a JPEG try loading it
         if(regex_match(imgFileName, nameCheck))
@@ -131,16 +147,23 @@ int main(int argc, char** argv)
         //String that holds the option that the user chose
         string option = "";
 
-        //Printing out options
-        cout << "\nPossible options:\n";
-        cout << "1. Sort image's pixels horizontally\n";
-        cout << "2. Convert the image to gray scale\n";
-        cout << "3. Change image's contrast\n";
-        cout << "4. Change image's brightness\n";
-        cout << "Please enter an option (1, 2, 3, or 4): ";
+        if(argc != 3 && argc != 4) //If there are no command line arguments get the option from the user
+        {
+            //Printing out options
+            cout << "\nPossible options:\n";
+            cout << "1. Sort image's pixels horizontally\n";
+            cout << "2. Convert the image to gray scale\n";
+            cout << "3. Change image's contrast\n";
+            cout << "4. Change image's brightness\n";
+            cout << "Please enter an option (1, 2, 3, or 4): ";
 
-        //Putting the user's input into the option string
-        cin >> option;
+            //Putting the user's input into the option string
+            cin >> option;
+        }
+        else //Otherwise get the option from the second command line argument
+        {
+            option = argv[2];
+        }
 
         //If the user's input was invalid keep propting the user for valid input
         while(option != "1" && option != "2" && option != "3" && option != "4")
@@ -306,8 +329,15 @@ int main(int argc, char** argv)
         }
         else if(option == "3") //Change contrast
         {
-            cout << "\nPlease enter a value greater than 0: ";
-            cin >> contrast;
+            if(argc != 4) //If there is no command line argument for contrast get it from the user
+            {
+                cout << "\nPlease enter a value greater than 0: ";
+                cin >> contrast;
+            }
+            else
+            {
+                contrast = atoi(argv[3]);
+            }
 
             while(contrast < 0)
             {
@@ -324,8 +354,17 @@ int main(int argc, char** argv)
         }
         else //Change brightness
         {
-            cout << "\nPlease enter an integer in the interval [0, 255]: ";
-            cin >> bright;
+            
+            if(argc != 4) //If there is no command line argument for brightness get it from the user
+            {
+                cout << "\nPlease enter an integer in the interval [0, 255]: ";
+                cin >> bright;
+            }
+            else
+            {
+                bright = atoi(argv[3]);
+            }
+            
             while(bright < 0 || bright > 255)
             {
                 cout <<"\nValue not in the interval.\nPlease enter a value in the interval [0,255]: ";
