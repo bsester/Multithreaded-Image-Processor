@@ -229,7 +229,7 @@ int main(int argc, char** argv)
 
                 currentPixel++;
 
-                if(currentPixel % width == 0) //Next row reached
+                if(currentPixel % (width * channels) == 0) //Next row reached
                 {
                     numRowsProcessed++;
                 }
