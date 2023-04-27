@@ -1,0 +1,53 @@
+#!/bin/bash
+#SBATCH --job-name="smallTests"
+#SBATCH --output="output_small.%j.%N.txt"
+#SBATCH --partition=compute
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=20
+#SBATCH --account=isu102
+#SBATCH --export=ALL
+#SBATCH -t 00:30:00
+
+
+srun -n 1 ./ImageEditor Small.jpg 1
+
+srun -n 2 ./ImageEditor Small.jpg 1
+
+srun -n 5 ./ImageEditor Small.jpg 1
+
+srun -n 10 ./ImageEditor Small.jpg 1
+
+srun -n 20 ./ImageEditor Small.jpg 1
+
+
+srun -n 1 ./ImageEditor Small.jpg 2
+
+srun -n 2 ./ImageEditor Small.jpg 2
+
+srun -n 5 ./ImageEditor Small.jpg 2
+
+srun -n 10 ./ImageEditor Small.jpg 2
+
+srun -n 20 ./ImageEditor Small.jpg 2
+
+
+srun -n 1 ./ImageEditor Small.jpg 3 3
+
+srun -n 2 ./ImageEditor Small.jpg 3 3
+
+srun -n 5 ./ImageEditor Small.jpg 3 3
+
+srun -n 10 ./ImageEditor Small.jpg 3 3
+
+srun -n 20 ./ImageEditor Small.jpg 3 3
+
+
+srun -n 1 ./ImageEditor Small.jpg 4 100
+
+srun -n 2 ./ImageEditor Small.jpg 4 100
+
+srun -n 5 ./ImageEditor Small.jpg 4 100
+
+srun -n 10 ./ImageEditor Small.jpg 4 100
+
+srun -n 20 ./ImageEditor Small.jpg 4 100

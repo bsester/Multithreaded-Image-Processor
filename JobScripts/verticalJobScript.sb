@@ -3,10 +3,10 @@
 #SBATCH --output="output_largeVertical.%j.%N.txt"
 #SBATCH --partition=compute
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=16
+#SBATCH --ntasks-per-node=20
 #SBATCH --account=isu102
 #SBATCH --export=ALL
-#SBATCH -t 00:10:00
+#SBATCH -t 00:30:00
 
 
 srun -n 1 ./ImageEditor LargeVertical.jpg 1
