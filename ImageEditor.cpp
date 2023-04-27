@@ -27,7 +27,45 @@ void convertToGrayScale(vector<unsigned char> &original, vector<unsigned char> &
 void changeContrast(vector<unsigned char> &original, double contrast, int channels);
 
 //modifies the pixels of the vector by adding bright to each rgb component
-void changeBrightness(vector<unsigned char> &original, int bright, int channels); 
+void changeBrightness(vector<unsigned char> &original, int bright, int channels);
+
+//method to sort an image's pixels by their rgb values
+void sortHorizontal(vector <unsigned char> &original, int start, int end);
+
+// struct to hold pixels for sorting purposes
+struct pixel
+{
+  unsigned char red;
+  unsigned char green;
+  unsigned char blue;
+};
+
+// insertion sort to sort an array of pixels
+void insertionSort(vector <pixel> &pixels);
+
+// overloading comparison operator to sort pixels
+bool operator > (pixel &p1, pixel &p2)
+{
+  if (p1.red > p2.red)
+  {
+    return true;
+  }
+  else if ((p1.red == p2.red) &&
+          (p1.green > p2.green))
+  {
+    return true;
+  }
+  else if  ((p1.red == p2.red) &&
+           (p1.green == p2.green) &&
+           (p1.blue > p2.blue))
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
 
 int main(int argc, char** argv)
 {
@@ -55,7 +93,7 @@ int main(int argc, char** argv)
 
     //Will hold a pointer to the original image
     unsigned char *origImg;
-    
+
     //variables for changing the images brightness and contrast
     int bright;
     double contrast;
@@ -63,7 +101,7 @@ int main(int argc, char** argv)
     if(rank == 0)
     {
         //Creste regular expression to make sure the input file is a JPEG
-        regex nameCheck("^\\w+\\.jpg$"); 
+        regex nameCheck("^\\w+\\.jpg$");
 
         //Getting the name of the image file from the user
         cout << "Please input the name of a JPEG file to be edited: ";
@@ -77,19 +115,19 @@ int main(int argc, char** argv)
         }
 
         //If the image could not be loaded or is not a JPEG keep trying to get a valid image name
-        while(origImg == NULL || !regex_match(imgFileName, nameCheck)) 
+        while(origImg == NULL || !regex_match(imgFileName, nameCheck))
         {
             cout << "\nError loading the image or file is not a JPEG (.jpg)\n";
 
             cout << "Please input the name of a JPEG file to be edited: ";
             cin >> imgFileName;
-        
+
             origImg = stbi_load(imgFileName.c_str(), &width, &height, &channels, 0);
         }
 
         //Print image attributes
         cout << "Loaded image " << imgFileName << " with a width of " << width << "px, a height of " << height << "px, and " << channels << " channels\n";
-    
+
         /*(for(unsigned int i = 0; i < width * height; i++)
         {
             cout << "i = " << i << "origImg[i] = " <<  origImg[i] << "\n";
@@ -102,7 +140,7 @@ int main(int argc, char** argv)
 
         //String that holds the option that the user chose
         string option = "";
-        
+
         //Printing out options
         cout << "\nPossible options:\n";
         cout << "1. Sort image's pixels horizontally\n";
@@ -136,12 +174,15 @@ int main(int argc, char** argv)
         //Need to store pixels to send to each other processor
         vector<unsigned char> pixelsToSend;
 
+        //If sorting by rows save the work for rank 0
+        int rankZeroWork;
+
         //Send rows to each processor
         //Need to know if extra rows must be assigned
-        int remainder = (height * channels) % nproc;
+        int remainder = height % nproc;
 
         //Number of rows each processor must work on
-        int defaultWork = (height * channels) / nproc;
+        int defaultWork = height / nproc;
 
         //Holds the current rank of who's pixels are being stored
         int currentRank = 0;
@@ -151,7 +192,7 @@ int main(int argc, char** argv)
         //Get the vector of pixels for each rank
         while(currentRank < nproc)
         {
-                
+
             //Holds how muany rows the current rank needs to process
             int localWork = defaultWork;
 
@@ -160,6 +201,17 @@ int main(int argc, char** argv)
                 localWork += 1;
             }
 
+            if(option == "1")
+            {
+              if(currentRank == 0)
+              {
+                rankZeroWork = localWork;
+              }
+            else
+              {
+                MPI_Send(&localWork, 1, MPI_INT, currentRank, 30, comm);
+              }
+            }
             //Holds how many rows have been put into the processors array to be sent
             int numRowsProcessed = 0;
 
@@ -236,7 +288,25 @@ int main(int argc, char** argv)
         //Perform editing here for rank 0
         if(option == "1") //Sort horizontally
         {
-            
+          // get the number of rows for this thread
+            int noPixels = rankZeroPixels.size();
+            int rowLength = width * channels;
+            int numRows = noPixels / rowLength;
+
+            int remainder = height % nproc;
+
+            if (rank < remainder) // if there is an uneven distribution
+            {
+              numRows = numRows + 1;
+            }
+
+            for (int i = 0; i < rankZeroWork; i++)
+            {
+              int start = rowLength * i;
+              int end = (rowLength * (i+1) - 1);
+              sortHorizontal(rankZeroPixels, start, end);
+            }
+
         }
         else if(option == "2") //Convert to gray scale
         {
@@ -291,7 +361,7 @@ int main(int argc, char** argv)
 
         //Need a edited image pointer
         unsigned char *editedImg;
-        
+
         if(option != "2") //Create a resulting image with the same number of channels as the original
         {
             //Allocate memory for the edited image to receive the other processors pixels into
@@ -301,14 +371,14 @@ int main(int argc, char** argv)
         {
             //Allocate memory for the edited image to receive the other processors pixels into
             editedImg = (unsigned char *) malloc(width * height * 1);
-        }  
-        
+        }
+
 
         //Receive rows
-        
+
         //Holds the index of the current pixel in the edited image
         currentPixel = 0;
-        
+
         if(option != "2") //Get results from the rankZeroPixels vector
         {
             //Size of the rankZeroPixelsVector
@@ -329,7 +399,7 @@ int main(int argc, char** argv)
                 currentPixel++;
             }
         }
-        
+
 
         //Get all the pixels from the other processor and put then into the edited image
         for(int i = 1; i < nproc; i++)
@@ -420,8 +490,8 @@ int main(int argc, char** argv)
         cout << "\nOutput image is " << newFileName << "\n";
 
         //Free the memory used by the origianl image and edited image
-        stbi_image_free(origImg); 
-        stbi_image_free(editedImg); 
+        stbi_image_free(origImg);
+        stbi_image_free(editedImg);
 
     } //End of if(rank == 0)
     else
@@ -448,7 +518,7 @@ int main(int argc, char** argv)
         //Receive channels
         MPI_Recv(&channels, 1, MPI_INT, 0, 22, comm, MPI_STATUS_IGNORE);
         //cout << "rank: " << rank << " channels: " << channels << "\n";
-        
+
         //Receive the c string of option
         int option;
         MPI_Recv(&option, 1, MPI_INT, 0, 23, comm, MPI_STATUS_IGNORE);
@@ -456,9 +526,27 @@ int main(int argc, char** argv)
 
         if(option == 1) //Sort horizontally
         {
-            //Send the number of pixels processed by this processor and send the processed pixels
-            MPI_Send(&numPixels, 1, MPI_INT, 0, 14, comm);
-            MPI_Send(&localPixels.front(), numPixels, MPI_UNSIGNED_CHAR, 0, 15, comm);
+        int rowLength = width * channels;
+        int numRows = numPixels / rowLength;
+        int remainder = height % nproc;
+
+        int localWork;
+        MPI_Recv(&localWork, 1, MPI_INT, 0, 30, comm, MPI_STATUS_IGNORE);
+
+        if (rank < remainder) // if there is an uneven distribution
+        {
+          numRows = numRows + 1;
+        }
+        cout << "Rank " << rank << " localWork: " << localWork << " \nremainder: " << remainder << endl;
+        for (int i = 0; i < localWork; i++)
+        {
+          int start = rowLength * i;
+          int end = (rowLength * (i+1) - 1);
+          sortHorizontal(localPixels, start, end);
+        }
+          //Send the number of pixels processed by this processor and send the processed pixels
+          MPI_Send(&numPixels, 1, MPI_INT, 0, 14, comm);
+          MPI_Send(&localPixels.front(), numPixels, MPI_UNSIGNED_CHAR, 0, 15, comm);
         }
         else if(option == 2) //Convert to gray scale
         {
@@ -492,7 +580,7 @@ int main(int argc, char** argv)
 
             //Send the number of pixels processed by this processor and send the processed pixels
             MPI_Send(&numPixels, 1, MPI_INT, 0, 14, comm);
-            MPI_Send(&localPixels.front(), numPixels, MPI_UNSIGNED_CHAR, 0, 15, comm);    
+            MPI_Send(&localPixels.front(), numPixels, MPI_UNSIGNED_CHAR, 0, 15, comm);
         }
 
     } //End of else (other ranks done)
@@ -519,7 +607,7 @@ void convertToGrayScale(vector<unsigned char> &original, vector<unsigned char> &
     {
         int sum = 0;
         int sumIndex = i;
-        
+
         //Sum the channel values for the current pixel
         while(sumIndex < i + channels)
         {
@@ -554,4 +642,46 @@ void changeBrightness(vector<unsigned char> &original, int bright, int channels)
                 *(p + 1) = fmin(*(p + 1) + bright, 255);
                 *(p + 2) = fmin(*(p + 2) + bright, 255);
             }
+}
+void sortHorizontal(vector <unsigned char> &original, int start, int end)
+{
+  // create vector to hold pixels to sort, add pixels to it from the original image
+  vector<pixel> pixels;
+  pixel temp;
+
+  for (int i = start; i < end; i += 3)
+  {
+    temp.red = original[i];
+    temp.green = original[i + 1];
+    temp.blue = original[i + 2];
+    pixels.push_back(temp);
+  }
+
+  // sort pixels
+  insertionSort(pixels);
+  // use the sorted pixels to refill the array in sorted order
+  int size = pixels.size();
+  for (int i = 0; i < size; i++)
+  {
+    original[start + (i * 3)] = pixels[i].red;
+    original[start + ((i * 3) + 1)] = pixels[i].green;
+    original[start + ((i * 3) + 2)] = pixels[i].blue;
+  }
+
+
+}
+void insertionSort(vector <pixel> &pixels)
+{
+  int n = pixels.size();
+  for (int i = 1; i < n; i++)
+  {
+    pixel key = pixels[i];
+    int j = i - 1;
+      while (j >= 0 && pixels[j] > key)
+      {
+        pixels[j + 1] = pixels[j];
+        j = j - 1;
+      }
+      pixels[j + 1] = key;
+  }
 }
