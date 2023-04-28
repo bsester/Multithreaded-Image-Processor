@@ -1,0 +1,30 @@
+Overview: The ImageEditor.cpp application was created by Ben Sester, Ryan Leone, and John Carnicle. It uses stb_image and std_image_write libraries. 
+It takes in the name of a JPEG file and prompts the user to enter one of four options to process the image in parallel. Option 1 allows the user to 
+sort the image’s pixels by row. Option 2 allows the user to convert the image to grayscale. Option 3 allows the user to change the image’s contrast 
+by entering a number that can contain a decimal to multiply all the image’s channel values by. Option 4 allows the user to change the image’s 
+brightness by entering in an integer to add to all the image’s channel values.
+
+Compilation: mpiCC -g -Wall -o ImageEditor ImageEditor.cpp
+Run: mpiexec -n <processors> ./ImageEditor
+
+sortHorizontal(vector<unsigned char> &original, int start, int end): Uses a vector passed in as the first argument to create a vector filled with 
+pixel structs. The pixels are sorted by overloading the comparison operator and then calling the insertionSort() method on the resulting vector. 
+The start and end arguments specify a subsection of the vector to sort.
+
+convertToGrayScale(vector<unsigned char> &original, vector <unsigned char> &grayscale, int channels): Takes in a vector called original of channels 
+values for each pixel. Averages the values belonging to each pixel and stores the average into grayscale.
+
+changeBrightness(vector<unsigned char> &original, int bright, int channels): Takes in a vector called original, an int value to modify brightness, 
+and number of channels per pixel. For each pixel in the original vector, the bright parameter is added to each component. The new component value 
+will be the minimum value between the original value plus bright and 255. If the sum is larger than 255, the component value will be set to 255.
+
+changeContrast(vector<unsigned char> &original, double contrast, int channels): Takes in a vector called original, a double to scale the component 
+values, and the number of channels per pixel. For each pixel in the original vector, each component is scaled by the parameter contrast. The new 
+component value is the minimum of the product or 255. If the product exceeds 255, then the new component value is set to 255.
+
+int main(int argc, char** argv): Takes in the input file name of a JPEG file to be edited. Then takes in an option (1, 2, 3, or 4) that specifies 
+how the image should be edited. Then in the main method the communication between the manager and worker cores takes place. The manager core loads 
+the image and sends rows of the image to be processed to each core. If there is extra work the manager assigns the extra work evenly to the first 
+few cores. After each core gets its rows, each core modifies the rows it receives according to the option entered. Then each core sends its updated 
+pixels back to the manager and the manager assembles them into a new JPEG. The manager then saves the new image in the same directory as the application 
+with a name specifying how the image was edited.
