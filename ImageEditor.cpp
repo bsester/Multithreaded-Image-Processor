@@ -4,7 +4,8 @@
 //sort the pixels of an image row wise, change the image to gray scale,
 //change the image's contrast. or change the image's brightness.
 //Compile with: mpiCC -g -Wall -o ImageEditor ImageEditor.cpp
-//Run with: mpiexec -n <processors> ./ImageEditor <image name> <option> <contrast/brightness>
+//Run with: mpiexec -n <processors> ./ImageEditor
+// OR Run with: mpiexec -n <processors> ./ImageEditor <image name> <option> <contrast/brightness>
 //The image name, option, and contrast/brightness variables are optional but if an image name is provided an option MUST also be provided
 
 #include <iostream>
