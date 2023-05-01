@@ -14,13 +14,14 @@ end arguments specify a subsection of the vector to sort.
 convertToGrayScale(vector<unsigned char> &original, vector <unsigned char> &grayscale, int channels): Takes in a vector called original of channels values 
 for each pixel. Averages the values belonging to each pixel and stores the average into grayscale.
 
-changeBrightness(vector<unsigned char> &original, int bright, int channels): Takes in a vector called original, an int value to modify brightness, and number 
-of channels per pixel. For each pixel in the original vector, the bright parameter is added to each component. The new component value will be the minimum value 
-between the original value plus bright and 255. If the sum is larger than 255, the component value will be set to 255.
+changeBrightness(vector<unsigned char> &original, int bright, int channels): Takes in a vector called original, an int value to modify 
+brightness (value in the interval [-255,255], and number of channels per pixel. For each pixel in the original vector, the bright parameter is added to each component. 
+The new component value will be either 0, the sum, or 255. If the bright parameter is negative and the sum is less than 0, the value will be set to 0.
+If the bright parameter is non-negative and the sum exceeds 255, then the component value will be set to 255.
 
-changeContrast(vector<unsigned char> &original, double contrast, int channels): Takes in a vector called original, a double to scale the component values, and 
-the number of channels per pixel. For each pixel in the original vector, each component is scaled by the parameter contrast. The new component value is the 
-minimum of the product or 255. If the product exceeds 255, then the new component value is set to 255.
+changeContrast(vector<unsigned char> &original, double contrast, int channels): Takes in a vector called original, a double value (non-negative) 
+to scale the component values, and  the number of channels per pixel. For each pixel in the original vector, each component is scaled by the parameter contrast. 
+The new component value is the minimum of the product or 255. If the product exceeds 255, then the new component value is set to 255.
 
 int main(int argc, char** argv): Takes in the input file name of a JPEG file to be edited. Then takes in an option (1, 2, 3, or 4) that specifies how the image 
 should be edited. Then in the main method the communication between the manager and worker cores takes place. The manager core loads the image and sends rows of 
