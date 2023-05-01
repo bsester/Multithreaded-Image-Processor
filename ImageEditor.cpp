@@ -332,7 +332,7 @@ int main(int argc, char** argv)
         {
             if(argc != 4) //If there is no command line argument for contrast get it from the user
             {
-                cout << "\nPlease enter a value greater than 0: ";
+                cout << "\nPlease enter a value greater than or equal to 0: ";
                 cin >> contrast;
             }
             else
@@ -342,7 +342,7 @@ int main(int argc, char** argv)
 
             while(contrast < 0)
             {
-                cout << "\nInvalid input. Please enter a value greater than 0: ";
+                cout << "\nInvalid input. Please enter a value greater than or equal to 0: ";
                 cin >> contrast;
             }
 
@@ -358,7 +358,7 @@ int main(int argc, char** argv)
             
             if(argc != 4) //If there is no command line argument for brightness get it from the user
             {
-                cout << "\nPlease enter an integer in the interval [0, 255]: ";
+                cout << "\nPlease enter an integer in the interval [-255, 255]: ";
                 cin >> bright;
             }
             else
@@ -366,9 +366,9 @@ int main(int argc, char** argv)
                 bright = atoi(argv[3]);
             }
             
-            while(bright < 0 || bright > 255)
+            while(bright < -255 || bright > 255)
             {
-                cout <<"\nValue not in the interval.\nPlease enter a value in the interval [0,255]: ";
+                cout <<"\nValue not in the interval.\nPlease enter a value in the interval [-255,255]: ";
                 cin >> bright;
             }
 
@@ -636,11 +636,21 @@ void changeBrightness(vector<unsigned char> &original, int bright, int channels)
     for(auto p = original.begin(); p != original.end(); p += channels)
             {
                 //modifies brightness by the parameter bright for each RGB component in a pixel
-                *p = fmin(*p + bright, 255);
-                *(p + 1) = fmin(*(p + 1) + bright, 255);
-                *(p + 2) = fmin(*(p + 2) + bright, 255);
+                if(bright >= 0)
+                {
+                    *p = fmin(*p + bright, 255);
+                    *(p + 1) = fmin(*(p + 1) + bright, 255);
+                    *(p + 2) = fmin(*(p + 2) + bright, 255);
+                }
+                else //bright < 0
+                {
+                    *p = fmax(*p + bright, 0);
+                    *(p + 1) = fmax(*(p + 1) + bright, 0);
+                    *(p + 2) = fmax(*(p + 2) + bright, 0);
+                }
             }
 }
+
 void sortHorizontal(vector <unsigned char> &original, int start, int end)
 {
   // create vector to hold pixels to sort, add pixels to it from the original image
