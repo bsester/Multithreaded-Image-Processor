@@ -15,7 +15,7 @@ convertToGrayScale(vector<unsigned char> &original, vector <unsigned char> &gray
 for each pixel. Averages the values belonging to each pixel and stores the average into grayscale.
 
 changeBrightness(vector<unsigned char> &original, int bright, int channels): Takes in a vector called original, an int value to modify 
-brightness (value in the interval [-255,255], and number of channels per pixel. For each pixel in the original vector, the bright parameter is added to each component. 
+brightness (value in the interval [-255,255]), and number of channels per pixel. For each pixel in the original vector, the bright parameter is added to each component. 
 The new component value will be either 0, the sum, or 255. If the bright parameter is negative and the sum is less than 0, the value will be set to 0.
 If the bright parameter is non-negative and the sum exceeds 255, then the component value will be set to 255.
 
